@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+
+{% block title %}{{ task.title }} — 任務管理系統{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card shadow-sm">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                <h1 class="h4 mb-0">
+                    <i class="bi bi-file-text me-2 text-primary"></i>任務詳情
+                </h1>
+                <span class="badge {{ 'bg-success' if task.status == 'completed' else 'bg-warning text-dark' }} fs-6">
+                    {{ '已完成' if task.status == 'completed' else '待處理' }}
+                </span>
+            </div>
+            <div class="card-body">
+                <!-- 標題 -->
+                <h2 class="h5 mb-3 {% if task.status == 'completed' %}text-decoration-line-through text-muted{% endif %}">
+                    {{ task.title }}
+                </h2>
+
+                <!-- 描述 -->
+                {% if task.description %}
+                    <div class="mb-4">
+                        <h6 class="text-muted fw-semibold"><i class="bi bi-text-left me-1"></i>描述</h6>
+                        <p class="ms-3 mb-0" style="white-space: pre-wrap;">{{ task.description }}</p>
+                    </div>
+                {% endif %}
+
+                <!-- 詳細資訊 -->
+                <div class="row g-3 mb-4">
+                    {% if task.category_name %}
+                        <div class="col-sm-6">
+                            <div class="border rounded p-3">
+                                <small class="text-muted d-block"><i class="bi bi-tag me-1"></i>分類</small>
+                                <span class="fw-semibold">{{ task.category_name }}</span>
+                            </div>
+                        </div>
+                    {% endif %}
+
+                    {% if task.due_date %}
+                        <div class="col-sm-6">
+                            <div class="border rounded p-3">
+                                <small class="text-muted d-block"><i class="bi bi-calendar-event me-1"></i>截止日期</small>
+                                <span class="fw-semibold">{{ task.due_date[:16] }}</span>
+                            </div>
+                        </div>
+                    {% endif %}
+
+                    {% if task.reminder_at %}
+                        <div class="col-sm-6">
+                            <div class="border rounded p-3">
+                                <small class="text-muted d-block"><i class="bi bi-bell me-1"></i>提醒時間</small>
+                                <span class="fw-semibold">{{ task.reminder_at[:16] }}</span>
+                            </div>
+                        </div>
+                    {% endif %}
+
+                    {% if task.recurrence and task.recurrence != 'none' %}
+                        <div class="col-sm-6">
+                            <div class="border rounded p-3">
+                                <small class="text-muted d-block"><i class="bi bi-arrow-repeat me-1"></i>重複週期</small>
+                                <span class="fw-semibold">
+                                    {% if task.recurrence == 'daily' %}每日
+                                    {% elif task.recurrence == 'weekly' %}每週
+                                    {% elif task.recurrence == 'monthly' %}每月
+                                    {% endif %}
+                                </span>
+                            </div>
+                        </div>
+                    {% endif %}
+
+                    <div class="col-sm-6">
+                        <div class="border rounded p-3">
+                            <small class="text-muted d-block"><i class="bi bi-clock me-1"></i>建立時間</small>
+                            <span class="fw-semibold">{{ task.created_at[:16] }}</span>
+                        </div>
+                    </div>
+
+                    <div class="col-sm-6">
+                        <div class="border rounded p-3">
+                            <small class="text-muted d-block"><i class="bi bi-clock-history me-1"></i>最後更新</small>
+                            <span class="fw-semibold">{{ task.updated_at[:16] }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 操作按鈕 -->
+                <div class="d-flex justify-content-between">
+                    <a href="{{ url_for('pages.index') }}" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left me-1"></i>返回列表
+                    </a>
+                    <div class="d-flex gap-2">
+                        <form method="POST" action="{{ url_for('tasks.toggle_task', task_id=task.id) }}">
+                            <button type="submit" class="btn btn-{{ 'warning' if task.status == 'completed' else 'success' }}">
+                                <i class="bi {{ 'bi-arrow-counterclockwise' if task.status == 'completed' else 'bi-check-lg' }} me-1"></i>
+                                {{ '標為未完成' if task.status == 'completed' else '標為已完成' }}
+                            </button>
+                        </form>
+                        <a href="{{ url_for('tasks.edit_task', task_id=task.id) }}" class="btn btn-primary">
+                            <i class="bi bi-pencil me-1"></i>編輯
+                        </a>
+                        <form method="POST" action="{{ url_for('tasks.delete_task', task_id=task.id) }}"
+                              onsubmit="return confirm('確定要刪除這個任務嗎？')">
+                            <button type="submit" class="btn btn-danger">
+                                <i class="bi bi-trash me-1"></i>刪除
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

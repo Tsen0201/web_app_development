@@ -1,0 +1,109 @@
+/* ============================================
+   任務管理系統 — 全站自訂樣式
+   ============================================ */
+
+/* ----- 全局字體 ----- */
+body {
+    font-family: 'Noto Sans TC', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background-color: #f5f7fa;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+main {
+    flex: 1;
+}
+
+/* ----- 導覽列 ----- */
+.navbar-brand {
+    font-size: 1.2rem;
+    letter-spacing: 0.5px;
+}
+
+/* ----- 任務卡片 ----- */
+.task-card {
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    border-left: 4px solid #0d6efd;
+}
+
+.task-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+}
+
+.task-card.border-success {
+    border-left-color: #198754;
+}
+
+/* ----- 月曆 ----- */
+.calendar-table {
+    table-layout: fixed;
+}
+
+.calendar-cell {
+    height: 110px;
+    vertical-align: top;
+    padding: 8px !important;
+    position: relative;
+}
+
+.calendar-today {
+    background-color: #e8f0fe !important;
+}
+
+.calendar-day {
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.calendar-task-item {
+    padding: 1px 4px;
+    margin-bottom: 2px;
+    border-radius: 3px;
+    font-size: 0.75rem !important;
+    line-height: 1.4;
+}
+
+.calendar-task-item:hover {
+    background-color: rgba(13, 110, 253, 0.08);
+}
+
+/* ----- Flash Messages ----- */
+.alert {
+    border: none;
+    border-radius: 8px;
+}
+
+/* ----- 表單 ----- */
+.form-control:focus,
+.form-select:focus {
+    border-color: #86b7fe;
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.15);
+}
+
+/* ----- 卡片 ----- */
+.card {
+    border-radius: 10px;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.card-header {
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+/* ----- 響應式調整 ----- */
+@media (max-width: 768px) {
+    .calendar-cell {
+        height: 80px;
+        padding: 4px !important;
+    }
+
+    .calendar-task-item {
+        font-size: 0.65rem !important;
+    }
+
+    .calendar-day {
+        font-size: 0.8rem;
+    }
+}

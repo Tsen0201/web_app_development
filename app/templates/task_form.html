@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+
+{% block title %}{{ '編輯任務' if task else '新增任務' }} — 任務管理系統{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card shadow-sm">
+            <div class="card-header bg-white">
+                <h1 class="h4 mb-0">
+                    {% if task %}
+                        <i class="bi bi-pencil-square me-2 text-primary"></i>編輯任務
+                    {% else %}
+                        <i class="bi bi-plus-circle me-2 text-primary"></i>新增任務
+                    {% endif %}
+                </h1>
+            </div>
+            <div class="card-body">
+                <form method="POST"
+                      action="{% if task %}{{ url_for('tasks.update_task', task_id=task.id) }}{% else %}{{ url_for('tasks.create_task') }}{% endif %}">
+
+                    <!-- 任務標題 -->
+                    <div class="mb-3">
+                        <label for="title" class="form-label fw-semibold">
+                            任務標題 <span class="text-danger">*</span>
+                        </label>
+                        <input type="text" class="form-control" id="title" name="title"
+                               value="{{ task.title if task else '' }}"
+                               placeholder="輸入任務標題" required>
+                    </div>
+
+                    <!-- 任務描述 -->
+                    <div class="mb-3">
+                        <label for="description" class="form-label fw-semibold">任務描述</label>
+                        <textarea class="form-control" id="description" name="description"
+                                  rows="4" placeholder="輸入任務的詳細內容...">{{ task.description if task else '' }}</textarea>
+                    </div>
+
+                    <div class="row">
+                        <!-- 截止日期 -->
+                        <div class="col-md-6 mb-3">
+                            <label for="due_date" class="form-label fw-semibold">
+                                <i class="bi bi-calendar-event me-1"></i>截止日期
+                            </label>
+                            <input type="datetime-local" class="form-control" id="due_date" name="due_date"
+                                   value="{{ task.due_date[:16] if task and task.due_date else '' }}">
+                        </div>
+
+                        <!-- 分類 -->
+                        <div class="col-md-6 mb-3">
+                            <label for="category_id" class="form-label fw-semibold">
+                                <i class="bi bi-tag me-1"></i>分類
+                            </label>
+                            <select class="form-select" id="category_id" name="category_id">
+                                <option value="">不分類</option>
+                                {% for cat in categories %}
+                                    <option value="{{ cat.id }}"
+                                            {% if task and task.category_id == cat.id %}selected{% endif %}>
+                                        {{ cat.name }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <!-- 提醒時間 -->
+                        <div class="col-md-6 mb-3">
+                            <label for="reminder_at" class="form-label fw-semibold">
+                                <i class="bi bi-bell me-1"></i>提醒時間
+                            </label>
+                            <input type="datetime-local" class="form-control" id="reminder_at" name="reminder_at"
+                                   value="{{ task.reminder_at[:16] if task and task.reminder_at else '' }}">
+                        </div>
+
+                        <!-- 重複週期 -->
+                        <div class="col-md-6 mb-3">
+                            <label for="recurrence" class="form-label fw-semibold">
+                                <i class="bi bi-arrow-repeat me-1"></i>重複週期
+                            </label>
+                            <select class="form-select" id="recurrence" name="recurrence">
+                                <option value="none" {% if not task or task.recurrence == 'none' %}selected{% endif %}>不重複</option>
+                                <option value="daily" {% if task and task.recurrence == 'daily' %}selected{% endif %}>每日</option>
+                                <option value="weekly" {% if task and task.recurrence == 'weekly' %}selected{% endif %}>每週</option>
+                                <option value="monthly" {% if task and task.recurrence == 'monthly' %}selected{% endif %}>每月</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- 按鈕 -->
+                    <div class="d-flex justify-content-end gap-2 mt-3">
+                        <a href="{{ url_for('pages.index') }}" class="btn btn-outline-secondary">
+                            <i class="bi bi-x-lg me-1"></i>取消
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-lg me-1"></i>{{ '更新任務' if task else '建立任務' }}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

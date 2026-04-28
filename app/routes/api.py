@@ -6,6 +6,8 @@ API 路由 — 提供 JSON 格式資料
 
 from flask import Blueprint, request, jsonify
 
+from app.models import task
+
 api_bp = Blueprint('api', __name__)
 
 
@@ -19,8 +21,13 @@ def get_tasks_by_date():
     - 回傳 JSON { "tasks": [...] }
     - 缺少 date 參數時回傳 400
     """
-    # TODO: 實作
-    pass
+    date_str = request.args.get('date', '').strip()
+
+    if not date_str:
+        return jsonify({'error': '缺少 date 參數，格式：?date=YYYY-MM-DD'}), 400
+
+    tasks = task.get_by_date(date_str)
+    return jsonify({'tasks': tasks})
 
 
 @api_bp.route('/api/reminders')
@@ -31,5 +38,5 @@ def get_reminders():
     - 呼叫 task.get_pending_reminders() 取得所有待提醒任務
     - 回傳 JSON { "reminders": [...] }
     """
-    # TODO: 實作
-    pass
+    reminders = task.get_pending_reminders()
+    return jsonify({'reminders': reminders})

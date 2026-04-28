@@ -21,6 +21,12 @@ def get_db():
 
     回傳的連線會啟用 WAL 模式與外鍵約束，
     並使用 sqlite3.Row 作為 row_factory 方便以欄位名稱存取資料。
+
+    Returns:
+        sqlite3.Connection: 資料庫連線物件。
+
+    Raises:
+        sqlite3.Error: 無法連線至資料庫時拋出。
     """
     # 確保 instance 資料夾存在
     os.makedirs(DATABASE_DIR, exist_ok=True)
@@ -37,14 +43,31 @@ def init_db():
     初始化資料庫：讀取 database/schema.sql 並執行建表語法。
 
     若資料表已存在（CREATE TABLE IF NOT EXISTS），不會重複建立。
+    如果初始化失敗會印出錯誤訊息但不中斷程式。
     """
-    db = get_db()
-    with open(SCHEMA_PATH, 'r', encoding='utf-8') as f:
-        db.executescript(f.read())
-    db.close()
+    db = None
+    try:
+        db = get_db()
+        with open(SCHEMA_PATH, 'r', encoding='utf-8') as f:
+            db.executescript(f.read())
+        print("[init_db] 資料庫初始化成功。")
+    except FileNotFoundError:
+        print(f"[init_db] 找不到 schema 檔案：{SCHEMA_PATH}")
+    except sqlite3.Error as e:
+        print(f"[init_db] 資料庫初始化錯誤：{e}")
+    except Exception as e:
+        print(f"[init_db] 非預期錯誤：{e}")
+    finally:
+        if db:
+            db.close()
 
 
 def close_db(conn):
-    """關閉資料庫連線。"""
+    """
+    關閉資料庫連線。
+
+    Args:
+        conn (sqlite3.Connection | None): 要關閉的連線物件。
+    """
     if conn:
         conn.close()

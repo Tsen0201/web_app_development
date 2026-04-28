@@ -1,5 +1,8 @@
 """
 Category Model — 分類資料的 CRUD 操作
+
+提供分類（Category）資料表的新增、查詢、更新、刪除方法。
+使用 sqlite3 直接操作資料庫，每個函式皆包含錯誤處理。
 """
 
 from app.models import get_db
@@ -13,17 +16,25 @@ def create(name):
         name (str): 分類名稱（不可重複）。
 
     Returns:
-        int: 新建立分類的 id。
+        int | None: 新建立分類的 id，失敗時回傳 None。
     """
-    db = get_db()
-    cursor = db.execute(
-        "INSERT INTO categories (name) VALUES (?)",
-        (name,)
-    )
-    db.commit()
-    new_id = cursor.lastrowid
-    db.close()
-    return new_id
+    db = None
+    try:
+        db = get_db()
+        cursor = db.execute(
+            "INSERT INTO categories (name) VALUES (?)",
+            (name,)
+        )
+        db.commit()
+        return cursor.lastrowid
+    except Exception as e:
+        print(f"[Category.create] 錯誤：{e}")
+        if db:
+            db.rollback()
+        return None
+    finally:
+        if db:
+            db.close()
 
 
 def get_all():
@@ -31,14 +42,21 @@ def get_all():
     取得所有分類。
 
     Returns:
-        list[dict]: 所有分類的列表。
+        list[dict]: 所有分類的列表，失敗時回傳空列表。
     """
-    db = get_db()
-    rows = db.execute(
-        "SELECT * FROM categories ORDER BY id ASC"
-    ).fetchall()
-    db.close()
-    return [dict(row) for row in rows]
+    db = None
+    try:
+        db = get_db()
+        rows = db.execute(
+            "SELECT * FROM categories ORDER BY id ASC"
+        ).fetchall()
+        return [dict(row) for row in rows]
+    except Exception as e:
+        print(f"[Category.get_all] 錯誤：{e}")
+        return []
+    finally:
+        if db:
+            db.close()
 
 
 def get_by_id(category_id):
@@ -49,15 +67,22 @@ def get_by_id(category_id):
         category_id (int): 分類 ID。
 
     Returns:
-        dict | None: 分類資料，或 None（若不存在）。
+        dict | None: 分類資料，或 None（若不存在或發生錯誤）。
     """
-    db = get_db()
-    row = db.execute(
-        "SELECT * FROM categories WHERE id = ?",
-        (category_id,)
-    ).fetchone()
-    db.close()
-    return dict(row) if row else None
+    db = None
+    try:
+        db = get_db()
+        row = db.execute(
+            "SELECT * FROM categories WHERE id = ?",
+            (category_id,)
+        ).fetchone()
+        return dict(row) if row else None
+    except Exception as e:
+        print(f"[Category.get_by_id] 錯誤：{e}")
+        return None
+    finally:
+        if db:
+            db.close()
 
 
 def update(category_id, name):
@@ -71,15 +96,23 @@ def update(category_id, name):
     Returns:
         bool: 是否成功更新（True 表示有找到並更新）。
     """
-    db = get_db()
-    cursor = db.execute(
-        "UPDATE categories SET name = ? WHERE id = ?",
-        (name, category_id)
-    )
-    db.commit()
-    affected = cursor.rowcount
-    db.close()
-    return affected > 0
+    db = None
+    try:
+        db = get_db()
+        cursor = db.execute(
+            "UPDATE categories SET name = ? WHERE id = ?",
+            (name, category_id)
+        )
+        db.commit()
+        return cursor.rowcount > 0
+    except Exception as e:
+        print(f"[Category.update] 錯誤：{e}")
+        if db:
+            db.rollback()
+        return False
+    finally:
+        if db:
+            db.close()
 
 
 def delete(category_id):
@@ -95,12 +128,20 @@ def delete(category_id):
     Returns:
         bool: 是否成功刪除。
     """
-    db = get_db()
-    cursor = db.execute(
-        "DELETE FROM categories WHERE id = ?",
-        (category_id,)
-    )
-    db.commit()
-    affected = cursor.rowcount
-    db.close()
-    return affected > 0
+    db = None
+    try:
+        db = get_db()
+        cursor = db.execute(
+            "DELETE FROM categories WHERE id = ?",
+            (category_id,)
+        )
+        db.commit()
+        return cursor.rowcount > 0
+    except Exception as e:
+        print(f"[Category.delete] 錯誤：{e}")
+        if db:
+            db.rollback()
+        return False
+    finally:
+        if db:
+            db.close()

@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+
+{% block title %}{{ month_name }} — 月曆 — 任務管理系統{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h3 mb-0">
+        <i class="bi bi-calendar3 me-2 text-primary"></i>月曆檢視
+    </h1>
+</div>
+
+<!-- 月份導覽 -->
+<div class="card shadow-sm mb-4">
+    <div class="card-body py-2">
+        <div class="d-flex justify-content-between align-items-center">
+            <a href="{{ url_for('pages.calendar_view', year=prev_year, month=prev_month) }}"
+               class="btn btn-outline-primary btn-sm">
+                <i class="bi bi-chevron-left me-1"></i>上個月
+            </a>
+            <h4 class="mb-0 fw-bold">{{ month_name }}</h4>
+            <a href="{{ url_for('pages.calendar_view', year=next_year, month=next_month) }}"
+               class="btn btn-outline-primary btn-sm">
+                下個月<i class="bi bi-chevron-right ms-1"></i>
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- 月曆表格 -->
+<div class="card shadow-sm">
+    <div class="card-body p-0">
+        <table class="table table-bordered mb-0 calendar-table">
+            <thead class="table-primary">
+                <tr>
+                    <th class="text-center">一</th>
+                    <th class="text-center">二</th>
+                    <th class="text-center">三</th>
+                    <th class="text-center">四</th>
+                    <th class="text-center">五</th>
+                    <th class="text-center text-info">六</th>
+                    <th class="text-center text-danger">日</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for week in month_calendar %}
+                    <tr>
+                        {% for day in week %}
+                            {% if day == 0 %}
+                                <td class="calendar-cell bg-light"></td>
+                            {% else %}
+                                <td class="calendar-cell {% if day == today %}calendar-today{% endif %}"
+                                    data-date="{{ '%04d-%02d-%02d' | format(year, month, day) }}">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <span class="calendar-day {% if day == today %}badge bg-primary rounded-pill{% endif %}">
+                                            {{ day }}
+                                        </span>
+                                    </div>
+                                    {% if tasks_by_date.get(day) %}
+                                        <div class="calendar-tasks mt-1">
+                                            {% for t in tasks_by_date[day][:3] %}
+                                                <a href="{{ url_for('tasks.task_detail', task_id=t.id) }}"
+                                                   class="calendar-task-item d-block text-truncate text-decoration-none small
+                                                          {% if t.status == 'completed' %}text-muted text-decoration-line-through{% else %}text-dark{% endif %}"
+                                                   title="{{ t.title }}">
+                                                    <i class="bi {{ 'bi-check-circle-fill text-success' if t.status == 'completed' else 'bi-circle text-secondary' }} me-1"
+                                                       style="font-size: 0.6rem;"></i>{{ t.title }}
+                                                </a>
+                                            {% endfor %}
+                                            {% if tasks_by_date[day] | length > 3 %}
+                                                <span class="text-muted small">
+                                                    +{{ tasks_by_date[day] | length - 3 }} 個任務
+                                                </span>
+                                            {% endif %}
+                                        </div>
+                                    {% endif %}
+                                </td>
+                            {% endif %}
+                        {% endfor %}
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

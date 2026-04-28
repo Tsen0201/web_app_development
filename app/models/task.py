@@ -1,5 +1,9 @@
 """
 Task Model — 任務資料的 CRUD 操作與查詢邏輯
+
+提供任務（Task）資料表的新增、查詢、更新、刪除方法，
+以及月曆查詢、分類篩選、狀態切換、提醒查詢等進階功能。
+使用 sqlite3 直接操作資料庫，每個函式皆包含錯誤處理。
 """
 
 from app.models import get_db
@@ -20,20 +24,28 @@ def create(title, description='', status='pending', due_date=None,
         recurrence (str): 重複週期，預設 'none'。
 
     Returns:
-        int: 新建立任務的 id。
+        int | None: 新建立任務的 id，失敗時回傳 None。
     """
-    db = get_db()
-    cursor = db.execute(
-        """INSERT INTO tasks (title, description, status, due_date,
-                              category_id, reminder_at, recurrence)
-           VALUES (?, ?, ?, ?, ?, ?, ?)""",
-        (title, description, status, due_date,
-         category_id, reminder_at, recurrence)
-    )
-    db.commit()
-    new_id = cursor.lastrowid
-    db.close()
-    return new_id
+    db = None
+    try:
+        db = get_db()
+        cursor = db.execute(
+            """INSERT INTO tasks (title, description, status, due_date,
+                                  category_id, reminder_at, recurrence)
+               VALUES (?, ?, ?, ?, ?, ?, ?)""",
+            (title, description, status, due_date,
+             category_id, reminder_at, recurrence)
+        )
+        db.commit()
+        return cursor.lastrowid
+    except Exception as e:
+        print(f"[Task.create] 錯誤：{e}")
+        if db:
+            db.rollback()
+        return None
+    finally:
+        if db:
+            db.close()
 
 
 def get_all():
@@ -41,17 +53,24 @@ def get_all():
     取得所有任務（依截止日期排序，NULL 排最後）。
 
     Returns:
-        list[dict]: 所有任務的列表。
+        list[dict]: 所有任務的列表，失敗時回傳空列表。
     """
-    db = get_db()
-    rows = db.execute(
-        """SELECT t.*, c.name AS category_name
-           FROM tasks t
-           LEFT JOIN categories c ON t.category_id = c.id
-           ORDER BY t.due_date IS NULL, t.due_date ASC, t.created_at DESC"""
-    ).fetchall()
-    db.close()
-    return [dict(row) for row in rows]
+    db = None
+    try:
+        db = get_db()
+        rows = db.execute(
+            """SELECT t.*, c.name AS category_name
+               FROM tasks t
+               LEFT JOIN categories c ON t.category_id = c.id
+               ORDER BY t.due_date IS NULL, t.due_date ASC, t.created_at DESC"""
+        ).fetchall()
+        return [dict(row) for row in rows]
+    except Exception as e:
+        print(f"[Task.get_all] 錯誤：{e}")
+        return []
+    finally:
+        if db:
+            db.close()
 
 
 def get_by_id(task_id):
@@ -64,16 +83,23 @@ def get_by_id(task_id):
     Returns:
         dict | None: 任務資料（含分類名稱），或 None。
     """
-    db = get_db()
-    row = db.execute(
-        """SELECT t.*, c.name AS category_name
-           FROM tasks t
-           LEFT JOIN categories c ON t.category_id = c.id
-           WHERE t.id = ?""",
-        (task_id,)
-    ).fetchone()
-    db.close()
-    return dict(row) if row else None
+    db = None
+    try:
+        db = get_db()
+        row = db.execute(
+            """SELECT t.*, c.name AS category_name
+               FROM tasks t
+               LEFT JOIN categories c ON t.category_id = c.id
+               WHERE t.id = ?""",
+            (task_id,)
+        ).fetchone()
+        return dict(row) if row else None
+    except Exception as e:
+        print(f"[Task.get_by_id] 錯誤：{e}")
+        return None
+    finally:
+        if db:
+            db.close()
 
 
 def update(task_id, title=None, description=None, status=None,
@@ -125,17 +151,24 @@ def update(task_id, title=None, description=None, status=None,
 
     # 自動更新 updated_at
     fields.append("updated_at = datetime('now', 'localtime')")
-
     values.append(task_id)
 
     sql = f"UPDATE tasks SET {', '.join(fields)} WHERE id = ?"
 
-    db = get_db()
-    cursor = db.execute(sql, values)
-    db.commit()
-    affected = cursor.rowcount
-    db.close()
-    return affected > 0
+    db = None
+    try:
+        db = get_db()
+        cursor = db.execute(sql, values)
+        db.commit()
+        return cursor.rowcount > 0
+    except Exception as e:
+        print(f"[Task.update] 錯誤：{e}")
+        if db:
+            db.rollback()
+        return False
+    finally:
+        if db:
+            db.close()
 
 
 def delete(task_id):
@@ -148,15 +181,23 @@ def delete(task_id):
     Returns:
         bool: 是否成功刪除。
     """
-    db = get_db()
-    cursor = db.execute(
-        "DELETE FROM tasks WHERE id = ?",
-        (task_id,)
-    )
-    db.commit()
-    affected = cursor.rowcount
-    db.close()
-    return affected > 0
+    db = None
+    try:
+        db = get_db()
+        cursor = db.execute(
+            "DELETE FROM tasks WHERE id = ?",
+            (task_id,)
+        )
+        db.commit()
+        return cursor.rowcount > 0
+    except Exception as e:
+        print(f"[Task.delete] 錯誤：{e}")
+        if db:
+            db.rollback()
+        return False
+    finally:
+        if db:
+            db.close()
 
 
 def toggle_status(task_id):
@@ -167,28 +208,36 @@ def toggle_status(task_id):
         task_id (int): 任務 ID。
 
     Returns:
-        str | None: 切換後的新狀態，或 None（若找不到任務）。
+        str | None: 切換後的新狀態，或 None（若找不到任務或發生錯誤）。
     """
-    db = get_db()
-    row = db.execute(
-        "SELECT status FROM tasks WHERE id = ?",
-        (task_id,)
-    ).fetchone()
+    db = None
+    try:
+        db = get_db()
+        row = db.execute(
+            "SELECT status FROM tasks WHERE id = ?",
+            (task_id,)
+        ).fetchone()
 
-    if not row:
-        db.close()
+        if not row:
+            return None
+
+        new_status = 'completed' if row['status'] == 'pending' else 'pending'
+        db.execute(
+            """UPDATE tasks
+               SET status = ?, updated_at = datetime('now', 'localtime')
+               WHERE id = ?""",
+            (new_status, task_id)
+        )
+        db.commit()
+        return new_status
+    except Exception as e:
+        print(f"[Task.toggle_status] 錯誤：{e}")
+        if db:
+            db.rollback()
         return None
-
-    new_status = 'completed' if row['status'] == 'pending' else 'pending'
-    db.execute(
-        """UPDATE tasks
-           SET status = ?, updated_at = datetime('now', 'localtime')
-           WHERE id = ?""",
-        (new_status, task_id)
-    )
-    db.commit()
-    db.close()
-    return new_status
+    finally:
+        if db:
+            db.close()
 
 
 def get_by_date(date_str):
@@ -199,19 +248,26 @@ def get_by_date(date_str):
         date_str (str): 日期字串，格式為 'YYYY-MM-DD'。
 
     Returns:
-        list[dict]: 該日期的任務列表。
+        list[dict]: 該日期的任務列表，失敗時回傳空列表。
     """
-    db = get_db()
-    rows = db.execute(
-        """SELECT t.*, c.name AS category_name
-           FROM tasks t
-           LEFT JOIN categories c ON t.category_id = c.id
-           WHERE date(t.due_date) = ?
-           ORDER BY t.due_date ASC""",
-        (date_str,)
-    ).fetchall()
-    db.close()
-    return [dict(row) for row in rows]
+    db = None
+    try:
+        db = get_db()
+        rows = db.execute(
+            """SELECT t.*, c.name AS category_name
+               FROM tasks t
+               LEFT JOIN categories c ON t.category_id = c.id
+               WHERE date(t.due_date) = ?
+               ORDER BY t.due_date ASC""",
+            (date_str,)
+        ).fetchall()
+        return [dict(row) for row in rows]
+    except Exception as e:
+        print(f"[Task.get_by_date] 錯誤：{e}")
+        return []
+    finally:
+        if db:
+            db.close()
 
 
 def get_by_category(category_id):
@@ -222,19 +278,26 @@ def get_by_category(category_id):
         category_id (int): 分類 ID。
 
     Returns:
-        list[dict]: 該分類下的任務列表。
+        list[dict]: 該分類下的任務列表，失敗時回傳空列表。
     """
-    db = get_db()
-    rows = db.execute(
-        """SELECT t.*, c.name AS category_name
-           FROM tasks t
-           LEFT JOIN categories c ON t.category_id = c.id
-           WHERE t.category_id = ?
-           ORDER BY t.due_date IS NULL, t.due_date ASC""",
-        (category_id,)
-    ).fetchall()
-    db.close()
-    return [dict(row) for row in rows]
+    db = None
+    try:
+        db = get_db()
+        rows = db.execute(
+            """SELECT t.*, c.name AS category_name
+               FROM tasks t
+               LEFT JOIN categories c ON t.category_id = c.id
+               WHERE t.category_id = ?
+               ORDER BY t.due_date IS NULL, t.due_date ASC""",
+            (category_id,)
+        ).fetchall()
+        return [dict(row) for row in rows]
+    except Exception as e:
+        print(f"[Task.get_by_category] 錯誤：{e}")
+        return []
+    finally:
+        if db:
+            db.close()
 
 
 def get_by_month(year, month):
@@ -246,20 +309,27 @@ def get_by_month(year, month):
         month (int): 月份 (1-12)。
 
     Returns:
-        list[dict]: 該月份的所有任務。
+        list[dict]: 該月份的所有任務，失敗時回傳空列表。
     """
     date_prefix = f"{year:04d}-{month:02d}"
-    db = get_db()
-    rows = db.execute(
-        """SELECT t.*, c.name AS category_name
-           FROM tasks t
-           LEFT JOIN categories c ON t.category_id = c.id
-           WHERE t.due_date LIKE ?
-           ORDER BY t.due_date ASC""",
-        (date_prefix + '%',)
-    ).fetchall()
-    db.close()
-    return [dict(row) for row in rows]
+    db = None
+    try:
+        db = get_db()
+        rows = db.execute(
+            """SELECT t.*, c.name AS category_name
+               FROM tasks t
+               LEFT JOIN categories c ON t.category_id = c.id
+               WHERE t.due_date LIKE ?
+               ORDER BY t.due_date ASC""",
+            (date_prefix + '%',)
+        ).fetchall()
+        return [dict(row) for row in rows]
+    except Exception as e:
+        print(f"[Task.get_by_month] 錯誤：{e}")
+        return []
+    finally:
+        if db:
+            db.close()
 
 
 def get_pending_reminders():
@@ -267,16 +337,23 @@ def get_pending_reminders():
     取得所有設有提醒且尚未完成的任務（提醒功能用）。
 
     Returns:
-        list[dict]: 需要提醒的任務列表。
+        list[dict]: 需要提醒的任務列表，失敗時回傳空列表。
     """
-    db = get_db()
-    rows = db.execute(
-        """SELECT t.*, c.name AS category_name
-           FROM tasks t
-           LEFT JOIN categories c ON t.category_id = c.id
-           WHERE t.status = 'pending'
-             AND t.reminder_at IS NOT NULL
-           ORDER BY t.reminder_at ASC"""
-    ).fetchall()
-    db.close()
-    return [dict(row) for row in rows]
+    db = None
+    try:
+        db = get_db()
+        rows = db.execute(
+            """SELECT t.*, c.name AS category_name
+               FROM tasks t
+               LEFT JOIN categories c ON t.category_id = c.id
+               WHERE t.status = 'pending'
+                 AND t.reminder_at IS NOT NULL
+               ORDER BY t.reminder_at ASC"""
+        ).fetchall()
+        return [dict(row) for row in rows]
+    except Exception as e:
+        print(f"[Task.get_pending_reminders] 錯誤：{e}")
+        return []
+    finally:
+        if db:
+            db.close()

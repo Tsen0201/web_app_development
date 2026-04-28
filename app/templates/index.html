@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+
+{% block title %}首頁 — 任務管理系統{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h3 mb-0">
+        <i class="bi bi-list-task me-2 text-primary"></i>任務列表
+    </h1>
+    <a href="{{ url_for('tasks.new_task') }}" class="btn btn-primary">
+        <i class="bi bi-plus-lg me-1"></i>新增任務
+    </a>
+</div>
+
+<!-- 分類篩選 -->
+<div class="card mb-4 shadow-sm">
+    <div class="card-body py-2">
+        <form method="GET" action="{{ url_for('pages.index') }}" class="d-flex align-items-center gap-3">
+            <label for="category-filter" class="form-label mb-0 text-nowrap fw-semibold">
+                <i class="bi bi-funnel me-1"></i>篩選分類：
+            </label>
+            <select name="category" id="category-filter" class="form-select form-select-sm" style="max-width: 200px;" onchange="this.form.submit()">
+                <option value="">全部分類</option>
+                {% for cat in categories %}
+                    <option value="{{ cat.id }}" {% if filter_category == cat.id %}selected{% endif %}>
+                        {{ cat.name }}
+                    </option>
+                {% endfor %}
+            </select>
+            {% if filter_category %}
+                <a href="{{ url_for('pages.index') }}" class="btn btn-outline-secondary btn-sm">
+                    <i class="bi bi-x-lg me-1"></i>清除篩選
+                </a>
+            {% endif %}
+        </form>
+    </div>
+</div>
+
+<!-- 任務列表 -->
+{% if tasks %}
+    <div class="row g-3">
+        {% for t in tasks %}
+            <div class="col-12">
+                <div class="card shadow-sm task-card {% if t.status == 'completed' %}border-success bg-success bg-opacity-10{% endif %}">
+                    <div class="card-body d-flex align-items-center gap-3">
+                        <!-- 狀態切換 -->
+                        <form method="POST" action="{{ url_for('tasks.toggle_task', task_id=t.id) }}">
+                            <button type="submit" class="btn btn-outline-{{ 'success' if t.status == 'completed' else 'secondary' }} btn-sm rounded-circle p-0"
+                                    style="width: 36px; height: 36px;" title="切換狀態">
+                                <i class="bi {{ 'bi-check-lg' if t.status == 'completed' else 'bi-circle' }}"></i>
+                            </button>
+                        </form>
+
+                        <!-- 任務資訊 -->
+                        <div class="flex-grow-1">
+                            <a href="{{ url_for('tasks.task_detail', task_id=t.id) }}"
+                               class="text-decoration-none">
+                                <h6 class="mb-1 {% if t.status == 'completed' %}text-decoration-line-through text-muted{% endif %}">
+                                    {{ t.title }}
+                                </h6>
+                            </a>
+                            <div class="d-flex flex-wrap gap-2 text-muted small">
+                                {% if t.category_name %}
+                                    <span class="badge bg-info text-dark">
+                                        <i class="bi bi-tag me-1"></i>{{ t.category_name }}
+                                    </span>
+                                {% endif %}
+                                {% if t.due_date %}
+                                    <span>
+                                        <i class="bi bi-calendar-event me-1"></i>{{ t.due_date[:16] }}
+                                    </span>
+                                {% endif %}
+                                {% if t.recurrence and t.recurrence != 'none' %}
+                                    <span class="badge bg-warning text-dark">
+                                        <i class="bi bi-arrow-repeat me-1"></i>
+                                        {% if t.recurrence == 'daily' %}每日
+                                        {% elif t.recurrence == 'weekly' %}每週
+                                        {% elif t.recurrence == 'monthly' %}每月
+                                        {% endif %}
+                                    </span>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- 操作按鈕 -->
+                        <div class="d-flex gap-1">
+                            <a href="{{ url_for('tasks.edit_task', task_id=t.id) }}"
+                               class="btn btn-outline-primary btn-sm" title="編輯">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                            <form method="POST" action="{{ url_for('tasks.delete_task', task_id=t.id) }}"
+                                  onsubmit="return confirm('確定要刪除這個任務嗎？')">
+                                <button type="submit" class="btn btn-outline-danger btn-sm" title="刪除">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+{% else %}
+    <div class="text-center py-5">
+        <i class="bi bi-inbox display-1 text-muted"></i>
+        <p class="text-muted mt-3 mb-4">目前沒有任務，快來新增一個吧！</p>
+        <a href="{{ url_for('tasks.new_task') }}" class="btn btn-primary">
+            <i class="bi bi-plus-lg me-1"></i>新增第一個任務
+        </a>
+    </div>
+{% endif %}
+{% endblock %}
